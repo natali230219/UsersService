@@ -9,19 +9,15 @@ import org.hibernate.query.Query;
 
 import java.util.List;
 
-public class UserDao {
+public class UserDaoImpl implements UserDao {
 
-    // CREATE - сохранение нового пользователя в базе данных
+    @Override
     public User saveUser(User user) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-
-            // Transaction - группа операций, которые выполняются вместе
             Transaction transaction = session.beginTransaction();
 
-            // persist() - сохраняет объект в базу
             session.persist(user);
 
-            // commit() - фиксируем изменения
             transaction.commit();
             System.out.println("Пользователь " + user.getUserName() + " сохранен");
             return user;
@@ -31,8 +27,7 @@ public class UserDao {
         }
     }
 
-    // READ - чтение пользователя
-    // 1. Чтение пользователя по его ID
+    @Override
     public User findById(Long id) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             return session.get(User.class, id);
@@ -42,7 +37,7 @@ public class UserDao {
         }
     }
 
-    // 2. Чтение пользователя по его EMAIL
+    @Override
     public User findByEmail(String email) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<User> query = session.createQuery(
@@ -57,7 +52,7 @@ public class UserDao {
         }
     }
 
-    // 3. Получение списка пользователей
+    @Override
     public List<User> findAll() {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<User> query = session.createQuery("FROM User", User.class);
@@ -68,7 +63,7 @@ public class UserDao {
         }
     }
 
-    // UPDATE - обновление данных пользователя
+    @Override
     public User updateUser(User user) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Transaction transaction = session.beginTransaction();
@@ -82,7 +77,7 @@ public class UserDao {
         }
     }
 
-    // DELETE - удаление пользователя из базы данных
+    @Override
     public boolean deleteUser(Long id) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Transaction transaction = session.beginTransaction();
