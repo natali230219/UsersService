@@ -1,8 +1,8 @@
 package org.example;
 
-import org.example.dao.UserDao;
 import org.example.dao.UserDaoImpl;
 import org.example.entities.User;
+import org.example.service.UserService;
 import org.example.util.HibernateUtil;
 
 import java.util.List;
@@ -10,7 +10,7 @@ import java.util.Scanner;
 
 public class Main {
     private static final Scanner scanner = new Scanner(System.in);
-    private static final UserDao userDao = new UserDaoImpl();
+    private static final UserService userService = new UserService(new UserDaoImpl());
 
     public static void main(String[] args) {
 
@@ -25,38 +25,45 @@ public class Main {
         while (exit) {
             showMenu();
             int choice = getIntInput("Выберите действие: ");
-            switch (choice) {
-                case 1:
-                    createUser();
-                    break;
-                case 2:
-                    findUserById();
-                    break;
-                case 3:
-                    findUserByEmail();
-                    break;
-                case 4:
-                    showAllUsers();
-                    break;
-                case 5:
-                    updateUser();
-                    break;
-                case 6:
-                    deleteUser();
-                    break;
-                case 0:
-                    exit = false;
-                    System.out.println("Выход их программы...");
-                    HibernateUtil.shutdown();
-                    break;
-                default:
-                    System.out.println("Неверный выбор! Попробуйте снова");
+
+            try {
+                switch (choice) {
+                    case 1:
+                        createUser();
+                        break;
+                    case 2:
+                        findUserById();
+                        break;
+                    case 3:
+                        findUserByEmail();
+                        break;
+                    case 4:
+                        showAllUsers();
+                        break;
+                    case 5:
+                        updateUser();
+                        break;
+                    case 6:
+                        deleteUser();
+                        break;
+                    case 0:
+                        exit = false;
+                        System.out.println("Выход их программы...");
+                        HibernateUtil.shutdown();
+                        break;
+                    default:
+                        System.out.println("Неверный выбор! Попробуйте снова");
+                }
+            } catch (IllegalArgumentException e) {
+                System.out.println("Ошибка: " + e.getMessage());
+            } catch (RuntimeException e) {
+                System.out.println("Системная ошибка: " + e.getMessage());
             }
-            System.out.println();
         }
     }
 
     private static void showMenu() {
+        System.out.println();
         System.out.println("================== Главное меню: ==================");
         System.out.println("1. Создать пользователя");
         System.out.println("2. Найти пользователя по его ID");
@@ -66,130 +73,94 @@ public class Main {
         System.out.println("6. Удалить пользователя");
         System.out.println("0. Выход");
         System.out.println("===================================================");
+        System.out.println();
     }
 
-    // 1. Создание нового пользователя
     private static void createUser() {
         System.out.println("-----Создание нового пользователя-----");
         String name = getStringInput("Имя: ");
         String email = getStringInput("Email: ");
         int age = getIntInput("Возраст: ");
 
-        if (userDao.findByEmail(email) != null) {
-            System.out.println("Ошибка: пользователь с таким email уже существует!");
-            return;
-        }
-        User user = new User(name, email, age);
-        User saved = userDao.saveUser(user);
-
-        if (saved != null) {
-            System.out.println("Пользователь сохранен в базе данных. ID: " + saved.getId());
-        } else {
-            System.out.println("Ошибка сохранения!");
-        }
+        User savedUser = userService.createUser(name, email, age);
+        System.out.println("Пользователь сохранен в базе данных. ID: " + savedUser.getId());
     }
 
-    // 2. Поиск пользователя по его ID
     private static void findUserById() {
         System.out.println("-----Поиск пользователя по его ID-----");
         long id = getLongInput("ID пользователя: ");
-        User user = userDao.findById(id);
-        if (user != null) {
-            printUser(user);
-        } else {
-            System.out.println("Пользователь не найден!");
-        }
+        User user = userService.getUserById(id);
+        printUser(user);
     }
 
     // 3. Поиск пользователя по его email
     private static void findUserByEmail() {
         System.out.println("-----Поиск пользователя по его email-----");
         String email = getStringInput("Email: ");
-        User user = userDao.findByEmail(email);
-        if (user != null) {
-            printUser(user);
-        } else {
-            System.out.println("Пользователь не найден");
-        }
+        User user = userService.getUserByEmail(email);
+        printUser(user);
     }
 
     // 4. Список всех пользователей
     private static void showAllUsers() {
         System.out.println("-----Все пользователи: -----");
-        List<User> users = userDao.findAll();
+        List<User> users = userService.getAllUsers();
+
         if (users.isEmpty()) {
             System.out.println("Нет пользователей в базе данных");
             return;
         }
 
         System.out.println("Найдено: " + users.size());
+        System.out.printf("%-3s | %-30s | %-25s | %-5s%n", "ID", "Имя", "Email", "Возраст");
+        System.out.println("--------------------------------------------------------------------------");
         for (User user : users) {
-            System.out.printf("%d | %s | %s | %d%n", user.getId(), user.getUserName(), user.getEmail(), user.getAge());
+            System.out.printf("%-3d | %-30s | %-25s | %-5d%n",
+                    user.getId(),
+                    user.getUserName(),
+                    user.getEmail(),
+                    user.getAge());
         }
     }
 
-    // 5. Обновление данных пользователя
     private static void updateUser() {
         System.out.println("-----Обновление данных-----");
-        long id = getLongInput("ID пользователя:");
-        User user = userDao.findById(id);
+        long id = getLongInput("ID пользователя: ");
 
-        if (user == null) {
-            System.out.println("Пользователь не найден");
-            return;
-        }
-
+        User current = userService.getUserById(id);
         System.out.println("Текущие данные пользователя: " +
-                user.getUserName() + ", " +
-                user.getEmail() + ", " +
-                user.getAge()
-        );
+                current.getUserName() + ", " +
+                current.getEmail() + ", " +
+                current.getAge());
 
         String newName = getStringInput("Новое имя: ");
-        if (!newName.isEmpty()) {
-            user.setUserName(newName);
-        }
         String newEmail = getStringInput("Новый email: ");
-        if (!newEmail.isEmpty()) {
-            User existingUser = userDao.findByEmail(newEmail);
-            if (existingUser != null && !existingUser.getId().equals(user.getId())) {
-                System.out.println("Email принадлежит другому пользователю!");
-                return;
-            }
-            user.setEmail(newEmail);
-        }
+        String newAgeStr = getStringInput("Новый возраст: ");
 
-        String newAge = getStringInput("Новый возраст: ");
-
-        if (!newAge.isEmpty()) {
+        Integer newAge = null;
+        if (!newAgeStr.isEmpty()) {
             try {
-                user.setAge(Integer.parseInt(newAge));
+                newAge = Integer.parseInt(newAgeStr);
             } catch (NumberFormatException e) {
-                System.out.println("Некорректный возраст");
+                System.out.println("Некорректный возраст, оставляем прежний");
             }
         }
 
-        User updatedUser = userDao.updateUser(user);
-        if (updatedUser != null) {
-            System.out.println("Пользователь обновлен!");
-        }
+        User updated = userService.updateUser(id, newName, newEmail, newAge);
+        System.out.println("Пользователь обновлен!");
+        System.out.println("Новые данные: " + updated.getUserName() + ", " + updated.getEmail());
     }
 
-    // 6. Удаление пользователя
     private static void deleteUser() {
         System.out.println("-----Удаление пользователя-----");
         long id = getLongInput("ID пользователя:");
-        User user = userDao.findById(id);
 
-        if (user == null) {
-            System.out.println("Пользователь не найден");
-            return;
-        }
-
+        User user = userService.getUserById(id);
         System.out.println("Удалить пользователя: " + user.getUserName() + "?");
         String confirm = getStringInput("Да/Нет:");
-        if(confirm.equalsIgnoreCase("да")){
-            boolean result = userDao.deleteUser(id);
+
+        if (confirm.equalsIgnoreCase("да")) {
+            boolean result = userService.deleteUser(id);
             System.out.println(result ? "Пользователь удален" : "Ошибка удаления");
         } else {
             System.out.println("Удаление отменено");
