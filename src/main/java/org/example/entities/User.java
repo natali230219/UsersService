@@ -10,13 +10,13 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String username;
+    @Column(name = "user_name", nullable = false, length = 100)  // ← ИСПРАВЛЕНО
+    private String userName;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "age", nullable = false)
     private Integer age;
 
     @Column(name = "created_time", nullable = false, updatable = false)
@@ -28,8 +28,9 @@ public class User {
     }
 
     public User() {}
-    public User(String username, String email, Integer age) {
-        this.username = username;
+
+    public User(String userName, String email, Integer age) {
+        this.userName = userName;
         this.email = email;
         this.age = age;
     }
@@ -43,11 +44,11 @@ public class User {
     }
 
     public String getUserName() {
-        return username;
+        return userName;
     }
 
-    public void setUserName(String username) {
-        this.username = username;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public String getEmail() {
@@ -77,6 +78,6 @@ public class User {
     @Override
     public String toString() {
         return String.format("User{id=%d, name='%s', email='%s', age=%d, createdTime=%s}",
-                id, username, email, age, createdTime);
+                id, userName, email, age, createdTime);
     }
 }

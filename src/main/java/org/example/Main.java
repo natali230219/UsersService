@@ -20,9 +20,9 @@ public class Main {
             HibernateUtil.shutdown();
         }));
 
-        boolean exit = true;
+        boolean running = true;
 
-        while (exit) {
+        while (running) {
             showMenu();
             int choice = getIntInput("Выберите действие: ");
 
@@ -47,7 +47,7 @@ public class Main {
                         deleteUser();
                         break;
                     case 0:
-                        exit = false;
+                        running = false;
                         System.out.println("Выход их программы...");
                         HibernateUtil.shutdown();
                         break;
@@ -168,8 +168,14 @@ public class Main {
     }
 
     private static String getStringInput(String s) {
-        System.out.print(s);
-        return scanner.nextLine().trim();
+        while (true) {
+            System.out.print(s);
+            String input = scanner.nextLine().trim();
+            if (!input.isEmpty()) {
+                return input;
+            }
+            System.out.println("Поле не может быть пустым!");
+        }
     }
 
     private static int getIntInput(String i) {

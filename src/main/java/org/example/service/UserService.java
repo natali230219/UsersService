@@ -69,23 +69,39 @@ public class UserService {
     }
 
     public User updateUser(Long id, String newName, String newEmail, Integer newAge) {
-        User user = getUserById(id);
 
-        if (newName != null && !newName.trim().isEmpty()) {
-            user.setUserName(newName);
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("ID должен быть положительным");
         }
 
-        if (newEmail != null && !newEmail.trim().isEmpty()) {
-            User exiting = userDao.findByEmail(newEmail);
-            if (exiting != null && !exiting.getId().equals(user.getId())) {
-                throw new IllegalArgumentException("Пользователь с таким email " + newEmail + " уже существует");
+        User user = getUserById(id);
+
+        if (newName != null) {
+            String trimmedName = newName.trim();
+            if (trimmedName.isEmpty()) {
+                throw new IllegalArgumentException("Имя не может быть пустым");
             }
-            user.setEmail(newEmail);
+            user.setUserName(trimmedName);
+        }
+
+        if (newEmail != null) {
+            String trimmedEmail = newEmail.trim();
+            if (trimmedEmail.isEmpty()) {
+                throw new IllegalArgumentException("Email не может быть пустым");
+            }
+
+            User existing = userDao.findByEmail(trimmedEmail);
+            if (existing != null && !existing.getId().equals(user.getId())) {
+                throw new IllegalArgumentException(
+                        "Пользователь с email '" + trimmedEmail + "' уже существует"
+                );
+            }
+            user.setEmail(trimmedEmail);
         }
 
         if (newAge != null) {
             if (newAge < 0 || newAge > 150) {
-                throw new IllegalArgumentException("Некорректный возраст");
+                throw new IllegalArgumentException("Возраст должен быть от 0 до 150");
             }
             user.setAge(newAge);
         }
