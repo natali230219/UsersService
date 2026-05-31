@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.example.dto.UserRequestDto;
 import org.example.dto.UserResponseDto;
 import org.example.entities.User;
+import org.example.kafka.KafkaProducerService;
 import org.example.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +15,11 @@ import java.util.stream.Collectors;
 @Transactional
 public class UserSpringServiceImpl implements UserSpringService {
     private final UserRepository userRepository;
+    private final KafkaProducerService kafkaProducerService;
 
-    public UserSpringServiceImpl(UserRepository userRepository) {
+    public UserSpringServiceImpl(UserRepository userRepository, KafkaProducerService kafkaProducerService) {
         this.userRepository = userRepository;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @Override
@@ -26,6 +29,7 @@ public class UserSpringServiceImpl implements UserSpringService {
         }
         User user = new User(request.getName(), request.getEmail(), request.getAge());
         User save = userRepository.save(user);
+        kafkaProducerService.sendNotification("CREATE", save.getEmail(), save.getUserName());
         return toResponseDto(save);
     }
 
@@ -39,7 +43,7 @@ public class UserSpringServiceImpl implements UserSpringService {
     @Override
     public UserResponseDto getUserByEmail(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new RuntimeException("Пользователь с email " + " не найден"));
+                () -> new RuntimeException("Пользователь с email " + email + " не найден"));
         return toResponseDto(user);
     }
 
@@ -54,7 +58,7 @@ public class UserSpringServiceImpl implements UserSpringService {
     public UserResponseDto updateUser(Long id, UserRequestDto request) {
         User user = userRepository.findById(id).orElseThrow(
                 () -> new RuntimeException("Пользователь с ID " + id + " не найден"));
-        if (!user.getEmail().equals(request.getEmail()) && !userRepository.existsByEmail(request.getEmail())) {
+        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Пользователь с email " + request.getEmail() + " уже существует");
         }
         user.setUserName(request.getName());
@@ -66,10 +70,10 @@ public class UserSpringServiceImpl implements UserSpringService {
 
     @Override
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("Пользователь с ID " + id + " не найден");
-        }
+        User user = userRepository.findById(id).orElseThrow(
+                () -> new RuntimeException("Пользователь с ID " + id + " не найден"));
         userRepository.deleteById(id);
+        kafkaProducerService.sendNotification("DELETE", user.getEmail(), user.getUserName());
     }
 
     private UserResponseDto toResponseDto(User user) {
