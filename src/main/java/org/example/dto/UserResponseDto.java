@@ -1,8 +1,10 @@
 package org.example.dto;
 
+import org.springframework.hateoas.RepresentationModel;
+
 import java.time.LocalDateTime;
 
-public class UserResponseDto {
+public class UserResponseDto extends RepresentationModel<UserResponseDto> {
     private Long id;
     private String name;
     private String email;

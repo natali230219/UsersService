@@ -54,7 +54,7 @@ public class UserSpringServiceImpl implements UserSpringService {
     public UserResponseDto updateUser(Long id, UserRequestDto request) {
         User user = userRepository.findById(id).orElseThrow(
                 () -> new RuntimeException("Пользователь с ID " + id + " не найден"));
-        if (!user.getEmail().equals(request.getEmail()) && !userRepository.existsByEmail(request.getEmail())) {
+        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Пользователь с email " + request.getEmail() + " уже существует");
         }
         user.setUserName(request.getName());

@@ -40,8 +40,10 @@ class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -50,6 +52,7 @@ class UserControllerTest {
         userRepository.deleteAll();
     }
 
+    // ========== 1. УСПЕШНОЕ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ==========
     @Test
     void createUser_ShouldReturnCreatedUser() throws Exception {
         UserRequestDto request = new UserRequestDto();
@@ -61,9 +64,15 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Иван Иванов"));
+                .andExpect(jsonPath("$.name").value("Иван Иванов"))
+                .andExpect(jsonPath("$.email").value("ivan@mail.com"))
+                .andExpect(jsonPath("$.age").value(30))
+                .andExpect(jsonPath("$.id").exists())           // ← ID должен быть
+                .andExpect(jsonPath("$.createdTime").exists()) // ← дата должна быть
+                .andExpect(jsonPath("$._links").exists());     // ← HATEOAS ссылки!
     }
 
+    // ========== 2. ПОЛУЧИТЬ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ==========
     @Test
     void getAllUsers_ShouldReturnList() throws Exception {
         userRepository.save(new User("User1", "user1@test.com", 20));
@@ -71,13 +80,114 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$._embedded.userResponseDtoList.length()").value(2))  // ← ИЗМЕНЕНО!
+                .andExpect(jsonPath("$._links.self").exists())      // ← ссылка на себя
+                .andExpect(jsonPath("$._links.create").exists());   // ← ссылка на создание
     }
 
+    // ========== 3. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ ==========
     @Test
     void deleteUser_ShouldReturnNoContent() throws Exception {
         User saved = userRepository.save(new User("Удали", "delete@test.com", 40));
         mockMvc.perform(delete("/api/users/{id}", saved.getId()))
                 .andExpect(status().isNoContent());
+
+        // Проверяем, что пользователь действительно удалён
+        mockMvc.perform(get("/api/users/{id}", saved.getId()))
+                .andExpect(status().isNotFound());
+    }
+
+    // ========== 4. ПОЛУЧИТЬ ПОЛЬЗОВАТЕЛЯ ПО ID ==========
+    @Test
+    void getUserById_ShouldReturnUser() throws Exception {
+        User saved = userRepository.save(new User("Найти Меня", "find@test.com", 25));
+
+        mockMvc.perform(get("/api/users/{id}", saved.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Найти Меня"))
+                .andExpect(jsonPath("$._links.self").exists())     // ← HATEOAS!
+                .andExpect(jsonPath("$._links.all-users").exists())
+                .andExpect(jsonPath("$._links.update").exists())
+                .andExpect(jsonPath("$._links.delete").exists());
+    }
+
+    // ========== 5. ПОИСК ПО EMAIL ==========
+    @Test
+    void getUserByEmail_ShouldReturnUser() throws Exception {
+        userRepository.save(new User("По Email", "email@test.com", 30));
+
+        mockMvc.perform(get("/api/users/email")
+                        .param("email", "email@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("По Email"))
+                .andExpect(jsonPath("$._links.self").exists());
+    }
+
+    // ========== 6. ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ ==========
+    @Test
+    void updateUser_ShouldReturnUpdatedUser() throws Exception {
+        User saved = userRepository.save(new User("Старое Имя", "old@test.com", 20));
+
+        UserRequestDto updateRequest = new UserRequestDto();
+        updateRequest.setName("Новое Имя");
+        updateRequest.setEmail("new@test.com");
+        updateRequest.setAge(30);
+
+        mockMvc.perform(put("/api/users/{id}", saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Новое Имя"))
+                .andExpect(jsonPath("$.email").value("new@test.com"))
+                .andExpect(jsonPath("$.age").value(30))
+                .andExpect(jsonPath("$._links.self").exists());
+    }
+
+    // ========== 7. НЕГАТИВНЫЙ ТЕСТ: ДУБЛИКАТ EMAIL ==========
+    @Test
+    void createUser_WithDuplicateEmail_ShouldReturnBadRequest() throws Exception {
+        userRepository.save(new User("Первый", "duplicate@test.com", 25));
+
+        UserRequestDto request = new UserRequestDto();
+        request.setName("Второй");
+        request.setEmail("duplicate@test.com");
+        request.setAge(30);
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Пользователь с email duplicate@test.com уже существует"));
+    }
+
+    // ========== 8. НЕГАТИВНЫЙ ТЕСТ: ПОИСК ПО НЕСУЩЕСТВУЮЩЕМУ ID ==========
+    @Test
+    void getUserById_NotFound_ShouldReturn404() throws Exception {
+        mockMvc.perform(get("/api/users/{id}", 9999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Пользователь с ID 9999 не найден"));
+    }
+
+    // ========== 9. НЕГАТИВНЫЙ ТЕСТ: ПУСТОЙ EMAIL ==========
+    @Test
+    void createUser_WithEmptyEmail_ShouldReturnBadRequest() throws Exception {
+        UserRequestDto request = new UserRequestDto();
+        request.setName("Тест");
+        request.setEmail("");
+        request.setAge(30);
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.email").exists());
+    }
+
+    // ========== 10. ПУСТОЙ СПИСОК ==========
+    @Test
+    void getAllUsers_WhenNoUsers_ShouldReturnEmptyList() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.userResponseDtoList").doesNotExist()); // ← пустой список
     }
 }
