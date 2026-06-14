@@ -1,0 +1,4 @@
+app:
+  name: user-service
+  version: 1.0.0
+  description: User service with Kafka and Circuit Breaker

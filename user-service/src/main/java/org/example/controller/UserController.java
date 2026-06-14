@@ -7,6 +7,8 @@ import org.example.service.UserSpringService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -16,6 +18,7 @@ import java.util.List;
 public class UserController {
 
     private final UserSpringService userService;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public UserController(UserSpringService userService) {
         this.userService = userService;
@@ -50,6 +53,16 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/test-notification")
+    @CircuitBreaker(name = "notificationService", fallbackMethod = "fallbackNotification")
+    public String testNotification() {
+        return restTemplate.getForObject("http://notification-service/api/notifications/health", String.class);
+    }
+
+    public String fallbackNotification(Exception e) {
+        return "Notification service недоступен. Сообщение не отправлено.";
     }
 }
 
