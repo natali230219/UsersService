@@ -52,7 +52,6 @@ class UserControllerTest {
         userRepository.deleteAll();
     }
 
-    // ========== 1. УСПЕШНОЕ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ==========
     @Test
     void createUser_ShouldReturnCreatedUser() throws Exception {
         UserRequestDto request = new UserRequestDto();
@@ -72,7 +71,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$._links").exists());     // ← HATEOAS ссылки!
     }
 
-    // ========== 2. ПОЛУЧИТЬ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ==========
     @Test
     void getAllUsers_ShouldReturnList() throws Exception {
         userRepository.save(new User("User1", "user1@test.com", 20));
@@ -85,7 +83,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$._links.create").exists());   // ← ссылка на создание
     }
 
-    // ========== 3. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ ==========
     @Test
     void deleteUser_ShouldReturnNoContent() throws Exception {
         User saved = userRepository.save(new User("Удали", "delete@test.com", 40));
@@ -97,7 +94,6 @@ class UserControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ========== 4. ПОЛУЧИТЬ ПОЛЬЗОВАТЕЛЯ ПО ID ==========
     @Test
     void getUserById_ShouldReturnUser() throws Exception {
         User saved = userRepository.save(new User("Найти Меня", "find@test.com", 25));
@@ -111,7 +107,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$._links.delete").exists());
     }
 
-    // ========== 5. ПОИСК ПО EMAIL ==========
     @Test
     void getUserByEmail_ShouldReturnUser() throws Exception {
         userRepository.save(new User("По Email", "email@test.com", 30));
@@ -123,7 +118,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$._links.self").exists());
     }
 
-    // ========== 6. ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ ==========
     @Test
     void updateUser_ShouldReturnUpdatedUser() throws Exception {
         User saved = userRepository.save(new User("Старое Имя", "old@test.com", 20));
@@ -143,7 +137,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$._links.self").exists());
     }
 
-    // ========== 7. НЕГАТИВНЫЙ ТЕСТ: ДУБЛИКАТ EMAIL ==========
     @Test
     void createUser_WithDuplicateEmail_ShouldReturnBadRequest() throws Exception {
         userRepository.save(new User("Первый", "duplicate@test.com", 25));
@@ -160,7 +153,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("Пользователь с email duplicate@test.com уже существует"));
     }
 
-    // ========== 8. НЕГАТИВНЫЙ ТЕСТ: ПОИСК ПО НЕСУЩЕСТВУЮЩЕМУ ID ==========
     @Test
     void getUserById_NotFound_ShouldReturn404() throws Exception {
         mockMvc.perform(get("/api/users/{id}", 9999L))
@@ -168,7 +160,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("Пользователь с ID 9999 не найден"));
     }
 
-    // ========== 9. НЕГАТИВНЫЙ ТЕСТ: ПУСТОЙ EMAIL ==========
     @Test
     void createUser_WithEmptyEmail_ShouldReturnBadRequest() throws Exception {
         UserRequestDto request = new UserRequestDto();
@@ -183,7 +174,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").exists());
     }
 
-    // ========== 10. ПУСТОЙ СПИСОК ==========
     @Test
     void getAllUsers_WhenNoUsers_ShouldReturnEmptyList() throws Exception {
         mockMvc.perform(get("/api/users"))

@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,7 +26,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/api/users")
-@Tag(name = "User Controller", description = "CRU D операции для управления пользователями")
+@Tag(name = "User Controller", description = "CRUD операции для управления пользователями")
 public class UserController {
 
     private final UserSpringService userService;
