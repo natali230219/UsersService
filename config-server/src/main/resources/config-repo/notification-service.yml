@@ -1,0 +1,4 @@
+app:
+  name: notification-service
+  version: 1.0.0
+  description: Notification service for email simulation
